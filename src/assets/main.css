@@ -1,0 +1,123 @@
+/* ---------- 设计变量 ---------- */
+
+:root {
+  --focus-color: #e8503a;
+  --focus-soft: rgba(232, 80, 58, 0.12);
+  --focus-soft-strong: rgba(232, 80, 58, 0.35);
+  --short-color: #2fa876;
+  --short-soft: rgba(47, 168, 118, 0.12);
+  --short-soft-strong: rgba(47, 168, 118, 0.35);
+  --long-color: #3e8fd8;
+  --long-soft: rgba(62, 143, 216, 0.12);
+  --long-soft-strong: rgba(62, 143, 216, 0.35);
+}
+
+:root[data-theme='light'] {
+  --bg: #f4f5f8;
+  --bg-card: #ffffff;
+  --bg-inset: #edeff3;
+  --text-1: #23272f;
+  --text-2: #5b6472;
+  --text-3: #9aa3b2;
+  --ring-track: #e4e7ee;
+  --border: #e2e5ec;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #14161b;
+  --bg-card: #1d2027;
+  --bg-inset: #262a33;
+  --text-1: #e9ecf2;
+  --text-2: #a8b0bf;
+  --text-3: #6b7382;
+  --ring-track: #2b2f39;
+  --border: #2c303a;
+  color-scheme: dark;
+}
+
+/* 阶段配色：专注=番茄红，短休息=绿，长休息=蓝（UX-02） */
+[data-phase='focus'] {
+  --phase-color: var(--focus-color);
+  --phase-soft: var(--focus-soft);
+  --phase-soft-strong: var(--focus-soft-strong);
+}
+
+[data-phase='short'] {
+  --phase-color: var(--short-color);
+  --phase-soft: var(--short-soft);
+  --phase-soft-strong: var(--short-soft-strong);
+}
+
+[data-phase='long'] {
+  --phase-color: var(--long-color);
+  --phase-soft: var(--long-soft);
+  --phase-soft-strong: var(--long-soft-strong);
+}
+
+/* ---------- 基础 ---------- */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  font-family:
+    'Segoe UI',
+    'Microsoft YaHei',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+input,
+textarea,
+select {
+  user-select: text;
+  font-family: inherit;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--phase-color);
+  outline-offset: 2px;
+}
+
+/* ---------- 通用 ---------- */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(20, 24, 36, 0.08);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ring-track);
+  border-radius: 3px;
+}

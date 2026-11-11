@@ -1,0 +1,5 @@
+# 本机（无 MSVC）使用 llvm-mingw 工具链作为链接器：
+# - llvm-mingw 位于 D:\myself\envrionment\llvm-mingw，其 bin 需在 PATH 中
+# - rustup 自带的精简 mingw 运行时在本机构建大体积二进制时存在启动崩溃问题
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"

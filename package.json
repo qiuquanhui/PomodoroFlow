@@ -1,0 +1,28 @@
+{
+  "name": "pomodoroflow",
+  "private": true,
+  "version": "0.1.0",
+  "description": "轻量、离线优先的 Windows 桌面番茄钟",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "icon:gen": "node scripts/gen-icon.cjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.0",
+    "@tauri-apps/plugin-notification": "^2.8.0",
+    "pinia": "^3.0.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.0",
+    "vue-tsc": "^2.2.0"
+  }
+}
