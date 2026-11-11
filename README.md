@@ -55,11 +55,13 @@ scripts\build.cmd    # 本机一键构建（见下方"本机构建环境说明"�
 
 ## 数据位置
 
-所有数据仅保存在本机：`%APPDATA%\com.pomodoroflow.app\`：
+数据目录按以下优先级解析（便携优先）：
 
-- `settings.json` 设置
-- `tasks.json` 任务列表
-- `sessions.json` 专注会话记录（长期统计的数据源）
+1. exe 旁的 `data-location.txt`（首行为自定义路径）——显式指定
+2. 安装目录同级的 `data` 文件夹——便携模式（本机即 `E:\myself\application\番茄钟\data`）
+3. `%APPDATA%\com.pomodoroflow.app`——默认兜底
+
+数据文件：`settings.json` 设置、`tasks.json` 任务、`sessions.json` 专注会话记录（长期统计唯一数据源）。备份/迁移只需拷贝整个数据目录。
 
 ## 路线图
 

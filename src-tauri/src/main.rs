@@ -83,7 +83,33 @@ struct SessionRecord {
 
 /* ---------- 本地 JSON 存储（原子写） ---------- */
 
+/// 数据目录解析（优先级从高到低）：
+/// 1. exe 旁的 `data-location.txt`（首行为自定义路径）——显式指定
+/// 2. exe 安装目录的同级 `data` 文件夹——便携模式（如 E:\...\番茄钟\data）
+/// 3. %APPDATA%\com.pomodoroflow.app——默认
 fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            // 1) 显式覆盖标记
+            let marker = exe_dir.join("data-location.txt");
+            if let Ok(text) = fs::read_to_string(&marker) {
+                let line = text.lines().next().unwrap_or("").trim();
+                if !line.is_empty() {
+                    let p = PathBuf::from(line);
+                    fs::create_dir_all(&p).map_err(|e| e.to_string())?;
+                    return Ok(p);
+                }
+            }
+            // 2) 便携模式：安装目录旁的 data 文件夹
+            if let Some(parent) = exe_dir.parent() {
+                let portable = parent.join("data");
+                if portable.is_dir() {
+                    return Ok(portable);
+                }
+            }
+        }
+    }
+    // 3) 默认：系统应用数据目录
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     Ok(dir)
