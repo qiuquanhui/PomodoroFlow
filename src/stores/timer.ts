@@ -108,8 +108,12 @@ export const useTimerStore = defineStore('timer', () => {
     }
     remainingMs.value = durationMs.value
     endAt.value = null
-    if (autoStart) start()
-    else {
+    if (autoStart) {
+      // 关键：完成瞬间 status 仍是 running，必须先复位，
+      // 否则 start() 会因"已在运行"提前返回，休息阶段冻结不跳动
+      status.value = 'idle'
+      start()
+    } else {
       status.value = 'idle'
       stopTicker()
     }
