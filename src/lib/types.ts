@@ -44,8 +44,6 @@ export const PHASE_LABEL: Record<Phase, string> = {
 export interface Task {
   id: string
   name: string
-  /** 预估番茄数 */
-  estimate: number
   createdAt: number
   /** 完成时间，null 表示未完成 */
   doneAt: number | null

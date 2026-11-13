@@ -8,7 +8,6 @@ const tasks = useTasksStore()
 const stats = useStatsStore()
 
 const newName = ref('')
-const newEstimate = ref(2)
 const showDone = ref(false)
 /** 正在编辑名称的任务 id */
 const editingId = ref<string | null>(null)
@@ -29,9 +28,8 @@ const investedMap = computed(() => {
 
 function addTask(): void {
   if (!newName.value.trim()) return
-  void tasks.add(newName.value, newEstimate.value)
+  void tasks.add(newName.value)
   newName.value = ''
-  newEstimate.value = 2
 }
 
 function startEdit(id: string, name: string): void {
@@ -63,10 +61,6 @@ function fmt(id: string): string {
         placeholder="新任务名称，如：复习线性代数"
         @keyup.enter="addTask"
       />
-      <div class="est">
-        <input v-model.number="newEstimate" class="est-input" type="number" min="0" max="50" title="预估番茄数" />
-        <span class="est-unit">🍅</span>
-      </div>
       <button class="add-btn" :disabled="!newName.trim()" @click="addTask">添加</button>
     </div>
 
@@ -104,8 +98,6 @@ function fmt(id: string): string {
           <template v-else>
             <div class="name">{{ t.name }}</div>
             <div class="meta">
-              <span>预估 {{ t.estimate }} 🍅</span>
-              <span class="sep">·</span>
               <span>已投 {{ fmt(t.id) }}</span>
             </div>
           </template>
@@ -170,27 +162,6 @@ function fmt(id: string): string {
 
 .name-input:focus {
   outline: none;
-}
-
-.est {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.est-input {
-  width: 40px;
-  height: 30px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-inset);
-  color: var(--text-1);
-  text-align: center;
-  font-size: 13px;
-}
-
-.est-unit {
-  font-size: 13px;
 }
 
 .add-btn {
@@ -286,10 +257,6 @@ function fmt(id: string): string {
   font-size: 11px;
   color: var(--text-3);
   margin-top: 3px;
-}
-
-.sep {
-  margin: 0 4px;
 }
 
 .edit-input {

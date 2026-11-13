@@ -61,7 +61,6 @@ type StatsMap = BTreeMap<String, DayStats>;
 struct Task {
     id: String,
     name: String,
-    estimate: u32,
     created_at: u64,
     done_at: Option<u64>,
 }

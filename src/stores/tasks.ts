@@ -36,11 +36,10 @@ export const useTasksStore = defineStore('tasks', () => {
     else localStorage.removeItem(LS_CURRENT)
   }
 
-  async function add(name: string, estimate: number): Promise<void> {
+  async function add(name: string): Promise<void> {
     const task: Task = {
       id: genId(),
       name: name.trim(),
-      estimate: Math.min(50, Math.max(0, Math.floor(estimate) || 0)),
       createdAt: Date.now(),
       doneAt: null,
     }
@@ -54,13 +53,6 @@ export const useTasksStore = defineStore('tasks', () => {
     const t = tasks.value.find((x) => x.id === id)
     if (!t || !name.trim()) return
     t.name = name.trim()
-    await backend.upsertTask(t)
-  }
-
-  async function setEstimate(id: string, estimate: number): Promise<void> {
-    const t = tasks.value.find((x) => x.id === id)
-    if (!t) return
-    t.estimate = Math.min(50, Math.max(0, Math.floor(estimate) || 0))
     await backend.upsertTask(t)
   }
 
@@ -89,7 +81,6 @@ export const useTasksStore = defineStore('tasks', () => {
     setCurrent,
     add,
     rename,
-    setEstimate,
     toggleDone,
     remove,
   }
