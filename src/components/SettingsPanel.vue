@@ -1,11 +1,25 @@
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { useSettingsStore } from '../stores/settings'
+import { useTasksStore } from '../stores/tasks'
+import { useStatsStore } from '../stores/stats'
 import { playChime, warmAudio } from '../lib/audio'
+import { t, type Locale } from '../lib/i18n'
+import {
+  getAutostart,
+  setAutostart,
+  setHotkeyEnabled,
+  pickImportFile,
+  mergeSessions,
+  upsertTask,
+} from '../lib/backend'
+import { exportCsv, exportJson, parseBackup } from '../lib/exporter'
 import type { AppSettings, Theme } from '../lib/types'
 
 const emit = defineEmits<{ close: [] }>()
 const store = useSettingsStore()
+const tasksStore = useTasksStore()
+const statsStore = useStatsStore()
 
 // 本地表单副本；变更即应用（清洗与持久化由 settings store 完成）
 const form = reactive<AppSettings>({ ...store.settings })
@@ -32,47 +46,138 @@ function checkedFromEvent(e: Event): boolean {
   return (e.target as HTMLInputElement).checked
 }
 
-const themes: Array<{ value: Theme; label: string }> = [
-  { value: 'system', label: '跟随系统' },
-  { value: 'light', label: '浅色' },
-  { value: 'dark', label: '深色' },
+const themes: Array<{ value: Theme; key: string }> = [
+  { value: 'system', key: 'theme.system' },
+  { value: 'light', key: 'theme.light' },
+  { value: 'dark', key: 'theme.dark' },
+]
+
+const languages: Array<{ value: Locale; label: string }> = [
+  { value: 'zh-CN', label: '中文' },
+  { value: 'en', label: 'English' },
 ]
 
 function testSound(): void {
   warmAudio()
   playChime('focusEnd', form.volume)
 }
+
+/* ---- 开机自启（M3）：状态以系统为准，失败时回显实际值 ---- */
+const autostartOn = ref(false)
+onMounted(async () => {
+  autostartOn.value = await getAutostart()
+})
+
+async function onToggleAutostart(e: Event): Promise<void> {
+  const target = e.target as HTMLInputElement
+  const want = target.checked
+  target.checked = autostartOn.value // 先还原，成功后再翻转，失败时 UI 不说谎
+  try {
+    await setAutostart(want)
+    autostartOn.value = want
+    target.checked = want
+  } catch (err) {
+    console.error('setAutostart failed:', err)
+  }
+}
+
+/* ---- 全局热键（M3）：设置持久化 + 即时注册/注销 ---- */
+async function onToggleHotkey(e: Event): Promise<void> {
+  const want = checkedFromEvent(e)
+  try {
+    await setHotkeyEnabled(want)
+    apply('hotkeyEnabled', want)
+  } catch (err) {
+    console.error('setHotkeyEnabled failed:', err)
+    showMsg(t('msg.exportFail', { err: String(err) }))
+  }
+}
+
+/* ---- 导出 / 导入（M3） ---- */
+const busy = ref(false)
+const message = ref('')
+let msgTimer: ReturnType<typeof setTimeout> | undefined
+
+function showMsg(text: string): void {
+  message.value = text
+  if (msgTimer) clearTimeout(msgTimer)
+  msgTimer = setTimeout(() => (message.value = ''), 6000)
+}
+
+async function onExport(fmt: 'json' | 'csv'): Promise<void> {
+  if (busy.value) return
+  busy.value = true
+  try {
+    const path =
+      fmt === 'json'
+        ? await exportJson(tasksStore.tasks, statsStore.sessions)
+        : await exportCsv(statsStore.sessions)
+    if (path) showMsg(`${t('msg.exported', { count: statsStore.sessions.length })} · ${path}`)
+  } catch (err) {
+    showMsg(t('msg.exportFail', { err: String(err) }))
+  } finally {
+    busy.value = false
+  }
+}
+
+async function onImport(): Promise<void> {
+  if (busy.value) return
+  busy.value = true
+  try {
+    const text = await pickImportFile()
+    if (!text) return
+    const data = parseBackup(text)
+    if (!data) {
+      showMsg(t('msg.invalidFile'))
+      return
+    }
+    const counts = await mergeSessions(data.sessions)
+    let tasksImported = 0
+    for (const task of data.tasks) {
+      if (tasksStore.tasks.some((x) => x.id === task.id)) continue
+      tasksStore.tasks.push(task)
+      await upsertTask(task)
+      tasksImported += 1
+    }
+    await Promise.all([statsStore.load(), tasksStore.load()])
+    showMsg(t('msg.imported', { sessions: counts.imported, tasks: tasksImported, skipped: counts.skipped }))
+  } catch (err) {
+    showMsg(t('msg.importFail', { err: String(err) }))
+  } finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
   <div class="overlay" @click.self="emit('close')">
-    <div class="panel card" role="dialog" aria-modal="true" aria-label="设置">
+    <div class="panel card" role="dialog" aria-modal="true" :aria-label="t('common.settings')">
       <header class="panel-header">
-        <h2>设置</h2>
-        <button class="icon-btn" aria-label="关闭设置" @click="emit('close')">✕</button>
+        <h2>{{ t('common.settings') }}</h2>
+        <button class="icon-btn" :aria-label="t('settings.close')" @click="emit('close')">✕</button>
       </header>
 
       <div class="panel-body">
         <section>
-          <h3>时长</h3>
+          <h3>{{ t('settings.durations') }}</h3>
           <div class="grid2">
             <div class="field">
-              <label for="set-focus">专注（分钟）</label>
+              <label for="set-focus">{{ t('settings.focusMin') }}</label>
               <input id="set-focus" type="number" min="1" max="120" step="1" :value="form.focusMin"
                 @change="apply('focusMin', numFromEvent($event))" />
             </div>
             <div class="field">
-              <label for="set-short">短休息（分钟）</label>
+              <label for="set-short">{{ t('settings.shortMin') }}</label>
               <input id="set-short" type="number" min="1" max="60" step="1" :value="form.shortBreakMin"
                 @change="apply('shortBreakMin', numFromEvent($event))" />
             </div>
             <div class="field">
-              <label for="set-long">长休息（分钟）</label>
+              <label for="set-long">{{ t('settings.longMin') }}</label>
               <input id="set-long" type="number" min="1" max="60" step="1" :value="form.longBreakMin"
                 @change="apply('longBreakMin', numFromEvent($event))" />
             </div>
             <div class="field">
-              <label for="set-interval">长休息间隔（番茄数）</label>
+              <label for="set-interval">{{ t('settings.interval') }}</label>
               <input id="set-interval" type="number" min="2" max="8" step="1" :value="form.longBreakInterval"
                 @change="apply('longBreakInterval', numFromEvent($event))" />
             </div>
@@ -80,58 +185,96 @@ function testSound(): void {
         </section>
 
         <section>
-          <h3>流转</h3>
+          <h3>{{ t('settings.flow') }}</h3>
           <label class="row">
-            <span>专注结束后自动开始休息</span>
+            <span>{{ t('settings.autoBreaks') }}</span>
             <input type="checkbox" class="switch" :checked="form.autoStartBreaks"
               @change="apply('autoStartBreaks', checkedFromEvent($event))" />
           </label>
           <label class="row">
-            <span>休息结束后自动开始专注</span>
+            <span>{{ t('settings.autoFocus') }}</span>
             <input type="checkbox" class="switch" :checked="form.autoStartFocus"
               @change="apply('autoStartFocus', checkedFromEvent($event))" />
           </label>
         </section>
 
         <section>
-          <h3>提醒</h3>
+          <h3>{{ t('settings.notify') }}</h3>
           <label class="row">
-            <span>阶段结束时播放提示音</span>
+            <span>{{ t('settings.sound') }}</span>
             <input type="checkbox" class="switch" :checked="form.soundEnabled"
               @change="apply('soundEnabled', checkedFromEvent($event))" />
           </label>
           <label class="row">
-            <span>阶段结束时弹出系统通知（右下角）</span>
+            <span>{{ t('settings.sysNotify') }}</span>
             <input type="checkbox" class="switch" :checked="form.notifyEnabled"
               @change="apply('notifyEnabled', checkedFromEvent($event))" />
           </label>
           <div class="row">
-            <span>音量</span>
+            <span>{{ t('settings.volume') }}</span>
             <div class="volume-row">
               <input type="range" min="0" max="100" step="1" :value="form.volume"
                 @input="apply('volume', numFromEvent($event))" />
               <span class="volume-num">{{ form.volume }}%</span>
-              <button class="mini-btn" @click="testSound">试听</button>
+              <button class="mini-btn" @click="testSound">{{ t('settings.test') }}</button>
             </div>
           </div>
         </section>
 
         <section>
-          <h3>外观</h3>
+          <h3>{{ t('settings.general') }}</h3>
+          <div class="row">
+            <span>{{ t('settings.language') }}</span>
+            <div class="lang-pills">
+              <button
+                v-for="l in languages"
+                :key="l.value"
+                class="lang-pill"
+                :class="{ active: form.locale === l.value }"
+                @click="apply('locale', l.value)"
+              >
+                {{ l.label }}
+              </button>
+            </div>
+          </div>
+          <label class="row">
+            <span>{{ t('settings.autostart') }}</span>
+            <input type="checkbox" class="switch" :checked="autostartOn" @change="onToggleAutostart" />
+          </label>
+          <label class="row">
+            <span>{{ t('settings.hotkey') }}</span>
+            <input type="checkbox" class="switch" :checked="form.hotkeyEnabled" @change="onToggleHotkey" />
+          </label>
+          <p class="hint">{{ t('settings.hotkeyHint') }}</p>
+        </section>
+
+        <section>
+          <h3>{{ t('settings.appearance') }}</h3>
           <div class="theme-pills">
             <button
-              v-for="t in themes"
-              :key="t.value"
+              v-for="opt in themes"
+              :key="opt.value"
               class="theme-pill"
-              :class="{ active: form.theme === t.value }"
-              @click="apply('theme', t.value)"
+              :class="{ active: form.theme === opt.value }"
+              @click="apply('theme', opt.value)"
             >
-              {{ t.label }}
+              {{ t(opt.key) }}
             </button>
           </div>
         </section>
 
-        <p class="footnote">关闭窗口将最小化到系统托盘，从托盘菜单可退出 · 数据仅保存在本机</p>
+        <section>
+          <h3>{{ t('settings.data') }}</h3>
+          <div class="data-actions">
+            <button class="data-btn" :disabled="busy" @click="onExport('json')">{{ t('settings.exportJson') }}</button>
+            <button class="data-btn" :disabled="busy" @click="onExport('csv')">{{ t('settings.exportCsv') }}</button>
+            <button class="data-btn primary" :disabled="busy" @click="onImport">{{ t('settings.import') }}</button>
+          </div>
+          <p class="hint">{{ t('settings.importHint') }}</p>
+          <p v-if="message" class="msg">{{ message }}</p>
+        </section>
+
+        <p class="footnote">{{ t('settings.footnote') }}</p>
       </div>
     </div>
   </div>
@@ -263,6 +406,75 @@ section h3 {
 .mini-btn:hover {
   color: var(--text-1);
   border-color: var(--phase-color);
+}
+
+.lang-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.lang-pill {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.lang-pill.active {
+  border-color: var(--phase-color);
+  color: var(--phase-color);
+  font-weight: 600;
+  background: var(--phase-soft);
+}
+
+.data-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.data-btn {
+  flex: 1;
+  min-width: 96px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.data-btn:hover:not(:disabled) {
+  color: var(--text-1);
+  border-color: var(--phase-color);
+}
+
+.data-btn.primary {
+  border-color: var(--phase-color);
+  color: var(--phase-color);
+  font-weight: 600;
+}
+
+.data-btn:disabled {
+  opacity: 0.5;
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.msg {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--phase-soft);
+  color: var(--text-1);
+  font-size: 12px;
+  word-break: break-all;
 }
 
 .theme-pills {

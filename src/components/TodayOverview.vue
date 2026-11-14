@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useStatsStore } from '../stores/stats'
 import { formatFocusTotal } from '../lib/format'
+import { t } from '../lib/i18n'
 
 const stats = useStatsStore()
 </script>
@@ -9,17 +10,17 @@ const stats = useStatsStore()
   <div class="today card">
     <div class="stat">
       <div class="stat-value">{{ stats.today.completed }}</div>
-      <div class="stat-label">今日番茄</div>
+      <div class="stat-label">{{ t('today.tomatoes') }}</div>
     </div>
     <div class="divider" />
     <div class="stat">
       <div class="stat-value">{{ formatFocusTotal(stats.today.focusMs) }}</div>
-      <div class="stat-label">今日专注</div>
+      <div class="stat-label">{{ t('today.focus') }}</div>
     </div>
     <div class="divider" />
     <div class="stat">
       <div class="stat-value muted">{{ stats.today.skipped }}</div>
-      <div class="stat-label">未完成</div>
+      <div class="stat-label">{{ t('today.skipped') }}</div>
     </div>
   </div>
 </template>

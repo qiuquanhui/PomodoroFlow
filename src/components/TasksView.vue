@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useTasksStore } from '../stores/tasks'
 import { useStatsStore } from '../stores/stats'
 import { formatFocusTotal } from '../lib/format'
+import { t } from '../lib/i18n'
 
 const tasks = useTasksStore()
 const stats = useStatsStore()
@@ -58,34 +59,34 @@ function fmt(id: string): string {
         class="name-input"
         type="text"
         maxlength="60"
-        placeholder="新任务名称，如：复习线性代数"
+        :placeholder="t('tasks.placeholder')"
         @keyup.enter="addTask"
       />
-      <button class="add-btn" :disabled="!newName.trim()" @click="addTask">添加</button>
+      <button class="add-btn" :disabled="!newName.trim()" @click="addTask">{{ t('tasks.add') }}</button>
     </div>
 
     <!-- 进行中 -->
-    <div v-if="tasks.active.length" class="group-title">进行中 · {{ tasks.active.length }}</div>
-    <div v-else class="empty card">还没有进行中的任务，先添加一个吧</div>
+    <div v-if="tasks.active.length" class="group-title">{{ t('tasks.activeCount', { n: tasks.active.length }) }}</div>
+    <div v-else class="empty card">{{ t('tasks.emptyActive') }}</div>
 
     <TransitionGroup name="task" tag="div" class="list">
       <div
-        v-for="t in tasks.active"
-        :key="t.id"
+        v-for="task in tasks.active"
+        :key="task.id"
         class="task card"
-        :class="{ current: tasks.currentTaskId === t.id }"
+        :class="{ current: tasks.currentTaskId === task.id }"
       >
         <button
           class="pick"
-          :title="tasks.currentTaskId === t.id ? '当前任务' : '设为当前任务'"
-          @click="tasks.setCurrent(tasks.currentTaskId === t.id ? null : t.id)"
+          :title="tasks.currentTaskId === task.id ? t('tasks.currentTip') : t('tasks.setCurrentTip')"
+          @click="tasks.setCurrent(tasks.currentTaskId === task.id ? null : task.id)"
         >
-          <span class="pick-dot" :class="{ on: tasks.currentTaskId === t.id }" />
+          <span class="pick-dot" :class="{ on: tasks.currentTaskId === task.id }" />
         </button>
 
-        <div class="body" @dblclick="startEdit(t.id, t.name)">
+        <div class="body" @dblclick="startEdit(task.id, task.name)">
           <input
-            v-if="editingId === t.id"
+            v-if="editingId === task.id"
             v-model="editName"
             class="edit-input"
             type="text"
@@ -96,31 +97,31 @@ function fmt(id: string): string {
             @blur="commitEdit"
           />
           <template v-else>
-            <div class="name">{{ t.name }}</div>
+            <div class="name">{{ task.name }}</div>
             <div class="meta">
-              <span>已投 {{ fmt(t.id) }}</span>
+              <span>{{ t('tasks.invested', { stat: fmt(task.id) }) }}</span>
             </div>
           </template>
         </div>
 
-        <button class="op done" title="标记完成" @click="tasks.toggleDone(t.id)">✓</button>
-        <button class="op del" title="删除" @click="tasks.remove(t.id)">✕</button>
+        <button class="op done" :title="t('tasks.markDone')" @click="tasks.toggleDone(task.id)">✓</button>
+        <button class="op del" :title="t('tasks.delete')" @click="tasks.remove(task.id)">✕</button>
       </div>
     </TransitionGroup>
 
     <!-- 已完成 -->
     <template v-if="tasks.done.length">
       <button class="group-title done-toggle" @click="showDone = !showDone">
-        已完成 · {{ tasks.done.length }} {{ showDone ? '▾' : '▸' }}
+        {{ t('tasks.doneCount', { n: tasks.done.length }) }} {{ showDone ? '▾' : '▸' }}
       </button>
       <div v-if="showDone" class="list">
-        <div v-for="t in tasks.done" :key="t.id" class="task card done">
+        <div v-for="task in tasks.done" :key="task.id" class="task card done">
           <div class="body">
-            <div class="name">{{ t.name }}</div>
-            <div class="meta">已投 {{ fmt(t.id) }}</div>
+            <div class="name">{{ task.name }}</div>
+            <div class="meta">{{ t('tasks.invested', { stat: fmt(task.id) }) }}</div>
           </div>
-          <button class="op" title="恢复为进行中" @click="tasks.toggleDone(t.id)">↩</button>
-          <button class="op del" title="删除" @click="tasks.remove(t.id)">✕</button>
+          <button class="op" :title="t('tasks.restore')" @click="tasks.toggleDone(task.id)">↩</button>
+          <button class="op del" :title="t('tasks.delete')" @click="tasks.remove(task.id)">✕</button>
         </div>
       </div>
     </template>

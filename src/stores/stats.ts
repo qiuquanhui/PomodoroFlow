@@ -84,15 +84,24 @@ export const useStatsStore = defineStore('stats', () => {
     return keys.map((k) => ({ key: k, minutes: Math.round(map.get(k) ?? 0) }))
   }
 
-  /** 任务维度的专注分钟数占比（全量历史） */
-  const taskMinutes = computed(() => {
+  /** 任务维度的专注分钟数（可按需限定范围，M3 支持今日占比） */
+  function taskMinutesOf(list: SessionRecord[]): Array<{ name: string; minutes: number }> {
     const map = new Map<string, number>()
-    for (const s of sessions.value) {
+    for (const s of list) {
       map.set(s.taskName, (map.get(s.taskName) ?? 0) + s.durationMs / 60000)
     }
     return [...map.entries()]
       .map(([name, minutes]) => ({ name, minutes }))
       .sort((a, b) => b.minutes - a.minutes)
+  }
+
+  /** 全部历史的任务时间占比 */
+  const taskMinutes = computed(() => taskMinutesOf(sessions.value))
+
+  /** 今日的任务时间占比（M3 新需求） */
+  const todayTaskMinutes = computed(() => {
+    const key = todayStr()
+    return taskMinutesOf(sessions.value.filter((s) => dayKey(s.start) === key))
   })
 
   /** 累计与连续天数（FR-502 streak） */
@@ -118,5 +127,15 @@ export const useStatsStore = defineStore('stats', () => {
     return { focusMs, completed, streak, days: daysWith.size }
   })
 
-  return { sessions, loaded, today, taskMinutes, totals, load, recordSession, dailyMinutes }
+  return {
+    sessions,
+    loaded,
+    today,
+    taskMinutes,
+    todayTaskMinutes,
+    totals,
+    load,
+    recordSession,
+    dailyMinutes,
+  }
 })

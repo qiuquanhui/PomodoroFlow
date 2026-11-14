@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTimerStore } from '../stores/timer'
+import { t } from '../lib/i18n'
 
 const timer = useTimerStore()
 
@@ -12,9 +13,9 @@ function onToggle(): void {
   <div class="controls">
     <button
       class="ctrl secondary"
-      title="重置当前阶段"
+      :title="t('ctrl.resetTitle')"
       :disabled="timer.status === 'idle'"
-      aria-label="重置"
+      :aria-label="t('ctrl.reset')"
       @click="timer.reset()"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -23,7 +24,7 @@ function onToggle(): void {
       </svg>
     </button>
 
-    <button class="ctrl primary" aria-label="开始或暂停" @click="onToggle">
+    <button class="ctrl primary" :aria-label="t('ctrl.toggleAria')" @click="onToggle">
       <svg v-if="timer.status === 'running'" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <rect x="6" y="4" width="4" height="16" rx="1" />
         <rect x="14" y="4" width="4" height="16" rx="1" />
@@ -31,10 +32,10 @@ function onToggle(): void {
       <svg v-else viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <polygon points="7 4 20 12 7 20" />
       </svg>
-      <span>{{ timer.status === 'running' ? '暂停' : timer.status === 'paused' ? '继续' : '开始' }}</span>
+      <span>{{ timer.status === 'running' ? t('ctrl.pause') : timer.status === 'paused' ? t('ctrl.resume') : t('ctrl.start') }}</span>
     </button>
 
-    <button class="ctrl secondary" title="跳到下一阶段" aria-label="跳过" @click="timer.skip()">
+    <button class="ctrl secondary" :title="t('ctrl.skipTitle')" :aria-label="t('ctrl.skip')" @click="timer.skip()">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <polygon points="5 4 15 12 5 20" fill="currentColor" />
         <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />

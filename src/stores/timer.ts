@@ -7,7 +7,8 @@ import { playChime } from '../lib/audio'
 import { notify } from '../lib/notify'
 import { setTrayState } from '../lib/backend'
 import { formatDuration } from '../lib/format'
-import { PHASE_LABEL, type Phase, type TimerStatus } from '../lib/types'
+import { phaseLabel, t } from '../lib/i18n'
+import type { Phase, TimerStatus } from '../lib/types'
 
 /**
  * 计时核心：剩余时间始终由「截止时刻 - performance.now()」推导，
@@ -125,7 +126,7 @@ export const useTimerStore = defineStore('timer', () => {
     const task = tasks.currentTask
     void stats.recordSession(
       task?.id ?? null,
-      task?.name ?? '未关联任务',
+      task?.name ?? t('session.noTask'),
       Math.round(Date.now() - elapsed), // performance.now 带小数，取整避免 u64 反序列化失败
       Math.round(elapsed),
       completed,
@@ -137,9 +138,10 @@ export const useTimerStore = defineStore('timer', () => {
     if (!s.notifyEnabled) return
     const task = tasks.currentTask
     if (finishedFocus) {
-      void notify('专注结束 🍅', `${task ? `「${task.name}」` : ''}完成一个番茄，休息一下吧`)
+      const body = task ? t('notify.focusBody', { task: task.name }) : t('notify.focusBodyNoTask')
+      void notify(t('notify.focusTitle'), body)
     } else {
-      void notify('休息结束 ⏰', '准备好开始下一个专注了吗？')
+      void notify(t('notify.breakTitle'), t('notify.breakBody'))
     }
   }
 
@@ -172,20 +174,28 @@ export const useTimerStore = defineStore('timer', () => {
     if (status.value === 'idle') remainingMs.value = durationMs.value
   })
 
-  // 托盘状态同步（FR-401）：标题与菜单文字，秒级节流
+  // 托盘状态同步（FR-401）：标题与全部菜单文字，秒级节流；语言切换时随 locale 重发
   let lastTrayText = ''
   watch(
-    () => [status.value, phase.value, Math.ceil(remainingMs.value / 1000)] as const,
+    () =>
+      [status.value, phase.value, Math.ceil(remainingMs.value / 1000), settingsStore.settings.locale] as const,
     () => {
       const running = status.value === 'running'
       const tooltip = running
-        ? `${formatDuration(remainingMs.value)} · ${PHASE_LABEL[phase.value]} - PomodoroFlow`
+        ? `${formatDuration(remainingMs.value)} · ${phaseLabel(phase.value)} - PomodoroFlow`
         : 'PomodoroFlow'
-      const toggleLabel = running ? '暂停' : status.value === 'paused' ? '继续' : '开始'
-      const key = `${tooltip}|${toggleLabel}`
+      const toggleLabel = running
+        ? t('ctrl.pause')
+        : status.value === 'paused'
+          ? t('ctrl.resume')
+          : t('ctrl.start')
+      const showLabel = t('tray.show')
+      const skipLabel = t('tray.skipPhase')
+      const quitLabel = t('tray.quit')
+      const key = [tooltip, toggleLabel, showLabel, skipLabel, quitLabel].join('|')
       if (key === lastTrayText) return
       lastTrayText = key
-      void setTrayState(tooltip, toggleLabel)
+      void setTrayState(tooltip, toggleLabel, showLabel, skipLabel, quitLabel)
     },
     { immediate: true },
   )

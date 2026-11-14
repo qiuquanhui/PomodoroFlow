@@ -135,13 +135,66 @@ export async function appendSession(s: SessionRecord): Promise<void> {
   localStorage.setItem(LS_SESSIONS, JSON.stringify(all))
 }
 
-/* ---------- 托盘状态同步（M2） ---------- */
+/* ---------- 托盘状态同步（M2 + M3 菜单文案国际化） ---------- */
 
-export async function setTrayState(tooltip: string, toggleLabel: string): Promise<void> {
+export async function setTrayState(
+  tooltip: string,
+  toggleLabel: string,
+  showLabel: string,
+  skipLabel: string,
+  quitLabel: string,
+): Promise<void> {
   if (!isTauri) return
   try {
-    await invoke('set_tray_state', { tooltip, toggleLabel })
+    await invoke('set_tray_state', { tooltip, toggleLabel, showLabel, skipLabel, quitLabel })
   } catch (e) {
     console.error('setTrayState failed:', e)
   }
+}
+
+/* ---------- 导出 / 导入（M3） ---------- */
+
+/** 调起系统保存对话框并写入内容；用户取消返回 null */
+export async function saveExport(
+  defaultName: string,
+  filterName: string,
+  filterExt: string,
+  content: string,
+): Promise<string | null> {
+  return invoke<string | null>('save_export', { defaultName, filterName, filterExt, content })
+}
+
+/** 选择并读取 JSON 备份文件；用户取消返回 null */
+export async function pickImportFile(): Promise<string | null> {
+  return invoke<string | null>('pick_import_file')
+}
+
+export interface MergeCounts {
+  imported: number
+  skipped: number
+}
+
+/** 按 id 去重合并会话记录（M3 导入） */
+export async function mergeSessions(incoming: SessionRecord[]): Promise<MergeCounts> {
+  return invoke<MergeCounts>('merge_sessions', { incoming })
+}
+
+/* ---------- 开机自启 / 全局热键（M3） ---------- */
+
+export async function getAutostart(): Promise<boolean> {
+  if (!isTauri) return false
+  try {
+    return await invoke<boolean>('get_autostart')
+  } catch (e) {
+    console.error('getAutostart failed:', e)
+    return false
+  }
+}
+
+export async function setAutostart(enabled: boolean): Promise<void> {
+  await invoke('set_autostart', { enabled })
+}
+
+export async function setHotkeyEnabled(enabled: boolean): Promise<void> {
+  await invoke('set_hotkey_enabled', { enabled })
 }

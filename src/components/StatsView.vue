@@ -2,9 +2,12 @@
 import { computed, ref } from 'vue'
 import { useStatsStore } from '../stores/stats'
 import { formatFocusTotal } from '../lib/format'
+import { t } from '../lib/i18n'
 
 const stats = useStatsStore()
 const rangeDays = ref<7 | 30>(7)
+/** 任务占比范围：默认今日（M3 新需求），可切全部历史 */
+const shareRange = ref<'today' | 'all'>('today')
 
 const daily = computed(() => stats.dailyMinutes(rangeDays.value))
 
@@ -61,16 +64,17 @@ function labelFor(i: number): string {
   const step = n > 10 ? 5 : 1
   const fromEnd = n - 1 - i
   if (fromEnd % step !== 0) return ''
-  if (fromEnd === 0) return '今天'
+  if (fromEnd === 0) return t('stats.today')
   const d = daily.value[i]
   return `${Number(d.key.slice(5, 7))}/${Number(d.key.slice(8))}`
 }
 
 const taskShare = computed(() => {
-  const total = stats.taskMinutes.reduce((a, b) => a + b.minutes, 0)
-  return stats.taskMinutes.slice(0, 8).map((t) => ({
-    ...t,
-    pct: total > 0 ? Math.round((t.minutes / total) * 100) : 0,
+  const src = shareRange.value === 'today' ? stats.todayTaskMinutes : stats.taskMinutes
+  const total = src.reduce((a, b) => a + b.minutes, 0)
+  return src.slice(0, 8).map((task) => ({
+    ...task,
+    pct: total > 0 ? Math.round((task.minutes / total) * 100) : 0,
   }))
 })
 
@@ -86,27 +90,27 @@ const totalLabel = computed(() => {
     <div class="totals card">
       <div class="t-item">
         <div class="t-num">{{ totalLabel.completed }}</div>
-        <div class="t-label">累计番茄</div>
+        <div class="t-label">{{ t('stats.totalTomatoes') }}</div>
       </div>
       <div class="t-div" />
       <div class="t-item">
         <div class="t-num">{{ formatFocusTotal(totalLabel.focusMs) }}</div>
-        <div class="t-label">累计专注</div>
+        <div class="t-label">{{ t('stats.totalFocus') }}</div>
       </div>
       <div class="t-div" />
       <div class="t-item">
         <div class="t-num">{{ totalLabel.streak }}</div>
-        <div class="t-label">连续天数</div>
+        <div class="t-label">{{ t('stats.streak') }}</div>
       </div>
     </div>
 
     <!-- 每日专注柱状图 -->
     <div class="card block">
       <div class="block-head">
-        <span class="block-title">每日专注</span>
+        <span class="block-title">{{ t('stats.daily') }}</span>
         <div class="range">
-          <button :class="{ on: rangeDays === 7 }" @click="rangeDays = 7">近7天</button>
-          <button :class="{ on: rangeDays === 30 }" @click="rangeDays = 30">近30天</button>
+          <button :class="{ on: rangeDays === 7 }" @click="rangeDays = 7">{{ t('stats.range7') }}</button>
+          <button :class="{ on: rangeDays === 30 }" @click="rangeDays = 30">{{ t('stats.range30') }}</button>
         </div>
       </div>
       <svg :viewBox="`0 0 ${bars[0]?.W ?? 320} ${bars[0]?.H ?? 148}`" class="chart" preserveAspectRatio="none">
@@ -128,10 +132,10 @@ const totalLabel = computed(() => {
             rx="2"
             :class="['bar', { today: i === bars.length - 1 }]"
           >
-            <title>{{ b.key }} · {{ b.minutes }} 分钟</title>
+            <title>{{ b.key }} · {{ t('fmt.minutes', { n: b.minutes }) }}</title>
           </rect>
           <circle v-else :cx="b.x + b.w / 2" :cy="b.base" r="1.8" class="empty-dot">
-            <title>{{ b.key }} · 无专注</title>
+            <title>{{ b.key }} · {{ t('stats.noFocus') }}</title>
           </circle>
           <text v-if="labelFor(i)" :x="b.x + b.w / 2" :y="b.H - 3" class="bar-label" text-anchor="middle">
             {{ labelFor(i) }}
@@ -140,21 +144,27 @@ const totalLabel = computed(() => {
       </svg>
     </div>
 
-    <!-- 任务时间占比 -->
+    <!-- 任务时间占比（今日 / 全部历史） -->
     <div class="card block">
       <div class="block-head">
-        <span class="block-title">任务时间占比（全部历史）</span>
-      </div>
-      <div v-if="taskShare.length" class="share">
-        <div v-for="t in taskShare" :key="t.name" class="share-row">
-          <div class="share-name" :title="t.name">{{ t.name }}</div>
-          <div class="share-bar">
-            <div class="share-fill" :style="{ width: Math.max(2, t.pct) + '%' }" />
-          </div>
-          <div class="share-val">{{ formatFocusTotal(t.minutes * 60000) }}</div>
+        <span class="block-title">{{ t('stats.shareTitle') }}</span>
+        <div class="range">
+          <button :class="{ on: shareRange === 'today' }" @click="shareRange = 'today'">{{ t('stats.shareToday') }}</button>
+          <button :class="{ on: shareRange === 'all' }" @click="shareRange = 'all'">{{ t('stats.shareAll') }}</button>
         </div>
       </div>
-      <div v-else class="empty">完成几个番茄后，这里会展示各任务的时间投入</div>
+      <div v-if="taskShare.length" class="share">
+        <div v-for="task in taskShare" :key="task.name" class="share-row">
+          <div class="share-name" :title="task.name">{{ task.name }}</div>
+          <div class="share-bar">
+            <div class="share-fill" :style="{ width: Math.max(2, task.pct) + '%' }" />
+          </div>
+          <div class="share-val">{{ formatFocusTotal(task.minutes * 60000) }}</div>
+        </div>
+      </div>
+      <div v-else class="empty">
+        {{ shareRange === 'today' ? t('stats.shareEmptyToday') : t('stats.shareEmptyAll') }}
+      </div>
     </div>
   </div>
 </template>

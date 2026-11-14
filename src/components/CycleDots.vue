@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { useSettingsStore } from '../stores/settings'
 import { useTimerStore } from '../stores/timer'
+import { t } from '../lib/i18n'
 
 const settings = useSettingsStore()
 const timer = useTimerStore()
+
+const title = () =>
+  t('cycle.title', { done: timer.completedInCycle, total: settings.settings.longBreakInterval })
 </script>
 
 <template>
-  <div
-    class="cycle-dots"
-    :title="`本轮 ${timer.completedInCycle}/${settings.settings.longBreakInterval} 个番茄，完成后进入长休息`"
-  >
+  <div class="cycle-dots" :title="title()">
     <span
       v-for="i in settings.settings.longBreakInterval"
       :key="i"

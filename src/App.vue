@@ -6,7 +6,7 @@ import { useSettingsStore } from './stores/settings'
 import { useTasksStore } from './stores/tasks'
 import { isTauri } from './lib/backend'
 import { formatDuration } from './lib/format'
-import { PHASE_LABEL } from './lib/types'
+import { phaseLabel, t } from './lib/i18n'
 import TimerView from './components/TimerView.vue'
 import TasksView from './components/TasksView.vue'
 import StatsView from './components/StatsView.vue'
@@ -19,10 +19,10 @@ const settingsStore = useSettingsStore()
 const settingsOpen = ref(false)
 const tab = ref<Tab>('timer')
 
-const tabs: Array<{ id: Tab; label: string; icon: string }> = [
-  { id: 'timer', label: '计时', icon: '⏱' },
-  { id: 'tasks', label: '任务', icon: '☑' },
-  { id: 'stats', label: '统计', icon: '📊' },
+const tabs: Array<{ id: Tab; label: () => string; icon: string }> = [
+  { id: 'timer', label: () => t('tab.timer'), icon: '⏱' },
+  { id: 'tasks', label: () => t('tab.tasks'), icon: '☑' },
+  { id: 'stats', label: () => t('tab.stats'), icon: '📊' },
 ]
 
 function switchTab(id: Tab): void {
@@ -40,19 +40,20 @@ function applyTheme(): void {
 
 watch(() => settingsStore.settings.theme, applyTheme)
 
-/* ---- 窗口标题实时显示剩余时间（FR-107）---- */
+/* ---- 窗口标题实时显示剩余时间（FR-107），语言切换时同步 ---- */
 watch(
-  () => [timer.status, timer.remainingMs, timer.phase] as const,
+  () => [timer.status, timer.remainingMs, timer.phase, settingsStore.settings.locale] as const,
   () => {
     document.title =
       timer.status === 'running'
-        ? `${formatDuration(timer.remainingMs)} · ${PHASE_LABEL[timer.phase]} - PomodoroFlow`
+        ? `${formatDuration(timer.remainingMs)} · ${phaseLabel(timer.phase)} - PomodoroFlow`
         : 'PomodoroFlow'
   },
 )
 
-/* ---- 托盘动作（FR-401）：托盘菜单控制计时 ---- */
+/* ---- 托盘动作（FR-401）+ 全局热键（M3）---- */
 let unlistenTray: UnlistenFn | null = null
+let unlistenHotkey: UnlistenFn | null = null
 onMounted(async () => {
   themeMedia.addEventListener('change', applyTheme)
   applyTheme()
@@ -62,6 +63,9 @@ onMounted(async () => {
       if (e.payload === 'toggle') timer.toggle()
       else if (e.payload === 'skip') timer.skip()
     })
+    unlistenHotkey = await listen<string>('global-hotkey', (e) => {
+      if (e.payload === 'toggle') timer.toggle()
+    })
   }
 })
 
@@ -69,6 +73,7 @@ onBeforeUnmount(() => {
   themeMedia.removeEventListener('change', applyTheme)
   window.removeEventListener('keydown', onKeydown)
   unlistenTray?.()
+  unlistenHotkey?.()
 })
 
 /* ---- 键盘：空格 开始/暂停，Esc 关闭弹层，1/2/3 切换标签 ---- */
@@ -99,7 +104,7 @@ const tabHint = { timer: '1', tasks: '2', stats: '3' } as const
         </svg>
         <span class="brand-name">PomodoroFlow</span>
       </div>
-      <button class="icon-btn" title="设置" aria-label="打开设置" @click="settingsOpen = true">
+      <button class="icon-btn" :title="t('common.settings')" :aria-label="t('common.settings')" @click="settingsOpen = true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <line x1="4" y1="21" x2="4" y2="14" />
           <line x1="4" y1="10" x2="4" y2="3" />
@@ -126,11 +131,11 @@ const tabHint = { timer: '1', tasks: '2', stats: '3' } as const
         :key="t.id"
         class="tab"
         :class="{ on: tab === t.id }"
-        :title="`${t.label}（${tabHint[t.id]}）`"
+        :title="`${t.label()}（${tabHint[t.id]}）`"
         @click="switchTab(t.id)"
       >
         <span class="tab-icon">{{ t.icon }}</span>
-        <span class="tab-label">{{ t.label }}</span>
+        <span class="tab-label">{{ t.label() }}</span>
       </button>
     </nav>
 

@@ -1,3 +1,5 @@
+import type { Locale } from './i18n'
+
 export type Phase = 'focus' | 'short' | 'long'
 export type TimerStatus = 'idle' | 'running' | 'paused'
 export type Theme = 'light' | 'dark' | 'system'
@@ -13,6 +15,10 @@ export interface AppSettings {
   notifyEnabled: boolean
   volume: number
   theme: Theme
+  /** 界面语言（M3） */
+  locale: Locale
+  /** 全局热键 Ctrl+Alt+Space（M3） */
+  hotkeyEnabled: boolean
 }
 
 export const defaultSettings: AppSettings = {
@@ -26,18 +32,14 @@ export const defaultSettings: AppSettings = {
   notifyEnabled: true,
   volume: 70,
   theme: 'system',
+  locale: 'zh-CN',
+  hotkeyEnabled: true,
 }
 
 export interface DayStats {
   focusMs: number
   completed: number
   skipped: number
-}
-
-export const PHASE_LABEL: Record<Phase, string> = {
-  focus: '专注',
-  short: '短休息',
-  long: '长休息',
 }
 
 /** 任务（FR-201/203） */

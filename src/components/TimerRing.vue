@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useTimerStore } from '../stores/timer'
 import { formatDuration } from '../lib/format'
-import { PHASE_LABEL } from '../lib/types'
+import { phaseLabel, t } from '../lib/i18n'
 
 const timer = useTimerStore()
 
@@ -13,9 +13,9 @@ const dashOffset = computed(() => CIRC * (1 - timer.progress))
 const timeText = computed(() => formatDuration(timer.remainingMs))
 
 const statusHint = computed(() => {
-  if (timer.status === 'running') return timer.phase === 'focus' ? '保持专注…' : '放松一下'
-  if (timer.status === 'paused') return '已暂停'
-  return '准备开始'
+  if (timer.status === 'running') return timer.phase === 'focus' ? t('ring.focusHint') : t('ring.relax')
+  if (timer.status === 'paused') return t('ring.paused')
+  return t('ring.ready')
 })
 </script>
 
@@ -37,7 +37,7 @@ const statusHint = computed(() => {
       <line class="tick" x1="226" y1="120" x2="234" y2="120" />
     </svg>
     <div class="center">
-      <div class="phase">{{ PHASE_LABEL[timer.phase] }}</div>
+      <div class="phase">{{ phaseLabel(timer.phase) }}</div>
       <div class="time">{{ timeText }}</div>
       <div class="hint">{{ statusHint }}</div>
     </div>

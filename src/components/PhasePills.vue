@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { useTimerStore } from '../stores/timer'
-import { PHASE_LABEL, type Phase } from '../lib/types'
+import { phaseLabel, t } from '../lib/i18n'
+import type { Phase } from '../lib/types'
 
 const timer = useTimerStore()
 const phases: Phase[] = ['focus', 'short', 'long']
 </script>
 
 <template>
-  <div class="phase-pills" role="tablist" aria-label="阶段切换">
+  <div class="phase-pills" role="tablist" :aria-label="t('pills.aria')">
     <button
       v-for="p in phases"
       :key="p"
@@ -16,10 +17,10 @@ const phases: Phase[] = ['focus', 'short', 'long']
       :class="{ active: timer.phase === p }"
       :aria-selected="timer.phase === p"
       :disabled="timer.status === 'running'"
-      :title="timer.status === 'running' ? '计时进行中，暂不能切换' : `切换到${PHASE_LABEL[p]}`"
+      :title="timer.status === 'running' ? t('pills.locked') : t('pills.switchTo', { phase: phaseLabel(p) })"
       @click="timer.selectPhase(p)"
     >
-      {{ PHASE_LABEL[p] }}
+      {{ phaseLabel(p) }}
     </button>
   </div>
 </template>

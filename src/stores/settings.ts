@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { defaultSettings, type AppSettings } from '../lib/types'
 import * as backend from '../lib/backend'
+import { setLocale, type Locale } from '../lib/i18n'
 
 function clampInt(v: unknown, min: number, max: number, fallback: number): number {
   const n = Math.floor(Number(v))
@@ -22,6 +23,8 @@ export function sanitize(raw: Partial<AppSettings>): AppSettings {
     notifyEnabled: raw.notifyEnabled ?? defaultSettings.notifyEnabled,
     volume: clampInt(raw.volume, 0, 100, defaultSettings.volume),
     theme: raw.theme === 'light' || raw.theme === 'dark' ? raw.theme : 'system',
+    locale: raw.locale === 'en' ? 'en' : 'zh-CN',
+    hotkeyEnabled: raw.hotkeyEnabled ?? defaultSettings.hotkeyEnabled,
   }
 }
 
@@ -31,7 +34,14 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function load(): Promise<void> {
     settings.value = sanitize(await backend.loadSettings())
+    setLocale(settings.value.locale)
     loaded.value = true
+
+    // 语言切换即时生效（托盘/标题由各自 watcher 响应 locale 变化）
+    watch(
+      () => settings.value.locale,
+      (l: Locale) => setLocale(l),
+    )
 
     let saveTimer: ReturnType<typeof setTimeout> | undefined
     watch(

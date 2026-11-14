@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useTimerStore } from '../stores/timer'
 import { useTasksStore } from '../stores/tasks'
+import { t } from '../lib/i18n'
 import PhasePills from './PhasePills.vue'
 import TimerRing from './TimerRing.vue'
 import CycleDots from './CycleDots.vue'
@@ -12,7 +13,7 @@ const timer = useTimerStore()
 const tasks = useTasksStore()
 const pickerOpen = ref(false)
 
-const currentName = computed(() => tasks.currentTask?.name ?? '未选择任务')
+const currentName = computed(() => tasks.currentTask?.name ?? t('picker.none'))
 </script>
 
 <template>
@@ -23,25 +24,25 @@ const currentName = computed(() => tasks.currentTask?.name ?? '未选择任务')
 
     <!-- 当前任务选择（FR-202）：专注记录自动关联 -->
     <div class="task-picker" :class="{ open: pickerOpen }">
-      <button class="picker-btn" title="选择当前任务" @click="pickerOpen = !pickerOpen">
-        <span class="picker-label">任务</span>
+      <button class="picker-btn" :title="t('picker.title')" @click="pickerOpen = !pickerOpen">
+        <span class="picker-label">{{ t('picker.task') }}</span>
         <span class="picker-name" :class="{ none: !tasks.currentTask }">{{ currentName }}</span>
         <span class="picker-caret">{{ pickerOpen ? '▴' : '▾' }}</span>
       </button>
       <div v-if="pickerOpen" class="picker-menu card">
         <button class="picker-item" :class="{ sel: !tasks.currentTask }" @click="tasks.setCurrent(null); pickerOpen = false">
-          不关联任务
+          {{ t('picker.unlink') }}
         </button>
         <button
-          v-for="t in tasks.active"
-          :key="t.id"
+          v-for="task in tasks.active"
+          :key="task.id"
           class="picker-item"
-          :class="{ sel: tasks.currentTaskId === t.id }"
-          @click="tasks.setCurrent(t.id); pickerOpen = false"
+          :class="{ sel: tasks.currentTaskId === task.id }"
+          @click="tasks.setCurrent(task.id); pickerOpen = false"
         >
-          {{ t.name }}
+          {{ task.name }}
         </button>
-        <div v-if="!tasks.active.length" class="picker-empty">暂无进行中的任务</div>
+        <div v-if="!tasks.active.length" class="picker-empty">{{ t('picker.empty') }}</div>
       </div>
     </div>
 

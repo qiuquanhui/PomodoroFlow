@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 export function formatDuration(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000))
   const h = Math.floor(total / 3600)
@@ -11,10 +13,10 @@ export function formatDuration(ms: number): string {
 
 export function formatFocusTotal(ms: number): string {
   const min = Math.round(ms / 60000)
-  if (min < 60) return `${min} 分钟`
+  if (min < 60) return t('fmt.minutes', { n: min })
   const h = Math.floor(min / 60)
   const m = min % 60
-  return m === 0 ? `${h} 小时` : `${h} 小时 ${m} 分`
+  return m === 0 ? t('fmt.hours', { n: h }) : t('fmt.hoursMinutes', { h, m })
 }
 
 /** 本地时区的 YYYY-MM-DD，作为统计的日期键。 */
