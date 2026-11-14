@@ -4,3 +4,8 @@ src-tauri/target/
 src-tauri/gen/
 *.local
 .DS_Store
+
+# 本机私有笔记（不进仓库）
+LOCAL_BUILD_NOTES.md
+release*.log
+scripts/build.cmd

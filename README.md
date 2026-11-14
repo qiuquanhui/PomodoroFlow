@@ -2,6 +2,16 @@
 
 轻量、离线优先的 Windows 桌面番茄钟。需求文档见 [docs/需求文档.md](docs/需求文档.md)。
 
+## 下载安装（推荐）
+
+直接从 GitHub Releases 下载安装包，双击即用：
+
+- **下载地址**：https://github.com/qiuquanhui/PomodoroFlow/releases
+- 当前版本 **v0.2.0**：[`PomodoroFlow_0.2.0_x64-setup.exe`](https://github.com/qiuquanhui/PomodoroFlow/releases/download/v0.2.0/PomodoroFlow_0.2.0_x64-setup.exe)（约 1.4 MB）
+- 按用户安装，无需管理员权限；自带卸载器并自动注册开始菜单
+- 支持静默安装：`PomodoroFlow_0.2.0_x64-setup.exe /S`（升级前请先退出运行中的应用，否则文件被占用）
+- 环境要求：Windows 10 1809+ / Windows 11（WebView2 运行时一般系统自带）
+
 ## 功能（M1 + M2 + M3）
 
 - 三阶段计时：专注 / 短休息 / 长休息（默认 25 / 5 / 15 分钟，可自定义 1–120）
@@ -39,43 +49,35 @@ npm run tauri dev    # 开发模式运行桌面应用
 npm run tauri build  # 打包 NSIS 安装包
 npm run icon:gen     # 重新生成图标源图
 npx tauri icon assets/icon-source.png   # 由源图生成全套应用图标
-scripts\build.cmd    # 本机一键构建（见下方"本机构建环境说明"）
 ```
 
-## 安装包在哪里
+## 从源码构建安装包
 
-执行 `npm run tauri build`（或 `scripts\build.cmd`）成功后，NSIS 安装包生成在：
+执行 `npm run tauri build` 成功后，NSIS 安装包生成在：
 
 ```
 src-tauri\target\release\bundle\nsis\PomodoroFlow_<版本号>_x64-setup.exe
 ```
 
-- 完整路径（本机仓库）：`E:\myself\portfolio\code\PomodoroFlow\src-tauri\target\release\bundle\nsis\`，当前版本为 **PomodoroFlow_0.2.0_x64-setup.exe**（约 1.4 MB），文件名中的版本号跟随 `tauri.conf.json` 的 `version` 变化
-- 双击即装（按用户安装，无需管理员），含卸载器并自动注册开始菜单；也支持静默安装：`PomodoroFlow_0.2.0_x64-setup.exe /S`（升级前需先退出正在运行的应用，否则文件被占用）
-- 本机已安装位置：`E:\myself\application\番茄钟\PomodoroFlow\pomodoroflow.exe`，数据目录在其旁边的 `data` 文件夹（见下节）
+文件名中的版本号跟随 `tauri.conf.json` 的 `version` 变化；构建出的安装包同样可双击安装或 `/S` 静默安装。
 
-## 本机构建环境说明（重要）
+## 构建环境说明（无 Visual Studio / GNU 工具链方案）
 
-本机没有安装 Visual Studio Build Tools，采用的是 Rust GNU 工具链 + llvm-mingw 链接器组合，全部依赖位于 `D:\myself\envrionment\`：
+本仓库在没有 Visual Studio Build Tools 的机器上采用 **Rust GNU 工具链 + llvm-mingw 链接器**组合构建（标准 MSVC 环境无需以下内容）：
 
-- **Rust 工具链**（GNU 宿主）：`D:\myself\envrionment\rustup`、`D:\myself\envrionment\cargo`（通过 `RUSTUP_HOME` / `CARGO_HOME` 环境变量指向，已写入用户环境变量）
-- **llvm-mingw**：`D:\myself\envrionment\llvm-mingw\llvm-mingw-20261104-ucrt-x86_64`，作为链接器（见 `src-tauri\.cargo\config.toml`）。rustup 自带的精简 mingw 运行时在本机构建大体积二进制存在启动崩溃问题，故改用完整 llvm-mingw 运行时
-- **rustc 重试器**：`D:\myself\envrionment\retry-rustc.exe`（源码 `retry-rustc.c`）。GNU 版 rustc 在空闲内存不足时可能启动即崩（STATUS_ACCESS_VIOLATION），重试器自动重试；构建时需保证空闲内存 ≥ 2.5GB
-- **历史坑位记录**（供排查参考）：
-  - 中文用户名路径会导致 GNU ld 链接失败 → 工具链必须放在纯 ASCII 路径（已按 D 盘布局解决）
-  - GNU 工具链的 build.rs 需要 `dlltool` → 已用 llvm-dlltool 放在 `D:\myself\envrionment\cargo\bin`
-  - cargo 的 jobserver 信号量曾疑似触发崩溃（已在重试器中过滤 `CARGO_MAKEFLAGS`，最终确认主因是内存压力）
+- Rust GNU 工具链通过 `RUSTUP_HOME` / `CARGO_HOME` 环境变量指定安装位置；工具链必须放在**纯 ASCII 路径**（中文用户名路径会导致 GNU ld 链接失败）
+- llvm-mingw 作为链接器（见 `src-tauri\.cargo\config.toml`）。rustup 自带的精简 mingw 运行时构建大体积二进制存在启动崩溃问题（STATUS_ACCESS_VIOLATION），需换用完整 llvm-mingw 运行时，并补齐 llvm-dlltool
+- GNU 工具链的 build.rs 需要 `dlltool`（windows-sys 等构建脚本依赖）
+- 一键构建：自行编写脚本设置上述环境变量后执行 `npm run tauri build` 即可（本仓库不附带特定机器路径的脚本）
 
-一键构建：`scripts\build.cmd`（自动设置以上全部环境变量）。
-
-> 真正的根因复盘：rustc 在加载**坏链接器时代产出的旧 proc-macro DLL**（tauri_macros / serde_repr）时必崩。删除 `target\debug\deps\` 下这两个 DLL 让 cargo 重编即可治愈（换链接器后首次全量构建时如遇同样症状，`cargo clean` 后重编）。
+> 完整踩坑实录（中文路径 / 崩溃根因 / cmd 命令行长度上限等）见 [docs/方案设计.md](docs/方案设计.md) §8。若换链接器后首次构建出现 rustc 崩溃，多为旧 proc-macro DLL 缓存中毒，`cargo clean` 后重编即可。
 
 ## 数据位置
 
 数据目录按以下优先级解析（便携优先）：
 
 1. exe 旁的 `data-location.txt`（首行为自定义路径）——显式指定
-2. 安装目录同级的 `data` 文件夹——便携模式（本机即 `E:\myself\application\番茄钟\data`）
+2. 安装目录同级的 `data` 文件夹——便携模式（如安装在 `D:\Tools\番茄钟\PomodoroFlow\`，数据即落在旁边的 `D:\Tools\番茄钟\data`）
 3. `%APPDATA%\com.pomodoroflow.app`——默认兜底
 
 数据文件：`settings.json` 设置、`tasks.json` 任务、`sessions.json` 专注会话记录（长期统计唯一数据源）。备份/迁移只需拷贝整个数据目录。
