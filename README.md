@@ -42,6 +42,18 @@ npx tauri icon assets/icon-source.png   # 由源图生成全套应用图标
 scripts\build.cmd    # 本机一键构建（见下方"本机构建环境说明"）
 ```
 
+## 安装包在哪里
+
+执行 `npm run tauri build`（或 `scripts\build.cmd`）成功后，NSIS 安装包生成在：
+
+```
+src-tauri\target\release\bundle\nsis\PomodoroFlow_<版本号>_x64-setup.exe
+```
+
+- 完整路径（本机仓库）：`E:\myself\portfolio\code\PomodoroFlow\src-tauri\target\release\bundle\nsis\`，当前版本为 **PomodoroFlow_0.2.0_x64-setup.exe**（约 1.4 MB），文件名中的版本号跟随 `tauri.conf.json` 的 `version` 变化
+- 双击即装（按用户安装，无需管理员），含卸载器并自动注册开始菜单；也支持静默安装：`PomodoroFlow_0.2.0_x64-setup.exe /S`（升级前需先退出正在运行的应用，否则文件被占用）
+- 本机已安装位置：`E:\myself\application\番茄钟\PomodoroFlow\pomodoroflow.exe`，数据目录在其旁边的 `data` 文件夹（见下节）
+
 ## 本机构建环境说明（重要）
 
 本机没有安装 Visual Studio Build Tools，采用的是 Rust GNU 工具链 + llvm-mingw 链接器组合，全部依赖位于 `D:\myself\envrionment\`：
