@@ -9,3 +9,9 @@ src-tauri/gen/
 LOCAL_BUILD_NOTES.md
 release*.log
 scripts/build.cmd
+
+# 宣传片渲染产物（成片与源码保留，帧序列/缓存不入库）
+promo/.frames/
+promo/.preview/
+promo/.edge-profile*/
+promo/audio.wav
